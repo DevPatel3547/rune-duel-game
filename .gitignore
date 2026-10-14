@@ -1,0 +1,49 @@
+# deps
+node_modules/
+*/node_modules/
+
+# builds
+dist/
+*/dist/
+build/
+*/build/
+
+# vite / cache
+.vite/
+*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# certs (dev:vr self-signed)
+*.pem
+.vercel
+.env*
+.env.local
+
+# downloaded asset originals (regenerate with tools/fetch_assets.mjs)
+assets/src/
+
+# build-time tooling downloads (see ASSETS.md to regenerate)
+assets/tools/
+
+# public build settings (anon key only; see the file header)
+!xr/.env.production
+
+# local tooling
+.claude/

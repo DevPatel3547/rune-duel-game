@@ -1,0 +1,22 @@
+{
+  "appId": "com.devpatel3547.runeduel",
+  "appName": "Rune Duel",
+  "webDir": "dist",
+  "backgroundColor": "#06070b",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#06070b"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#06070b",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DARK"
+    }
+  }
+}

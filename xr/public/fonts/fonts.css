@@ -1,0 +1,69 @@
+@font-face {
+  font-family: 'Grenze';
+  font-style: normal;
+  font-weight: 400;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/grenze-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Grenze';
+  font-style: normal;
+  font-weight: 700;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/grenze-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Grenze';
+  font-style: normal;
+  font-weight: 900;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/grenze-900.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Spectral';
+  font-style: normal;
+  font-weight: 400;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/spectral-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Spectral';
+  font-style: normal;
+  font-weight: 500;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/spectral-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Spectral';
+  font-style: normal;
+  font-weight: 600;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/spectral-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Spectral';
+  font-style: normal;
+  font-weight: 700;
+  /* swap: show fallback text immediately rather than blocking on the font —
+     an invisible UI while a font loads is worse than a brief reflow */
+  font-display: swap;
+  src: url('/fonts/spectral-700.woff2') format('woff2');
+}

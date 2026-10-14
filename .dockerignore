@@ -1,0 +1,15 @@
+# The match server image needs only the root manifests, the shared rules and
+# the server. Workspace manifests stay so the lockfile validates.
+**/node_modules
+.git
+.claude
+assets
+tools
+scripts
+**/dist
+**/test
+
+client/*
+!client/package.json
+xr/*
+!xr/package.json

@@ -1,0 +1,892 @@
+/* Self-hosted faces. Must be the first rule: @import is only valid at the
+   top of a stylesheet and is silently dropped anywhere else. */
+@import url('/fonts/fonts.css');
+
+:root {
+  /* ==================================================================
+     ART DIRECTION — CURSED ENERGY
+
+     A deliberate pivot from "cold iron and candlelight" to an anime
+     register, taking its cues from Jujutsu Kaisen and Demon Slayer.
+
+     The governing rule of that look is NOT "more colour" — it is a dim,
+     desaturated ground with a very small number of ferociously saturated
+     accents doing all the work. JJK keeps its world muted so that cursed
+     energy reads as energy. Flooding everything with vivid colour destroys
+     exactly the contrast that makes the style land.
+
+     So: near-black ground, and three accents that never blend into each
+     other.
+
+       CURSED BLUE   — the baseline energy. Player, mana, anything neutral
+                       and active.
+       SUKUNA RED    — the opponent, damage, danger. Never used decoratively.
+       CURSED VIOLET — rare and ominous. Reserved for the heaviest spells and
+                       for victory/defeat moments.
+
+     Everything else is a value, not a hue.
+     ================================================================== */
+
+  /* --- ground: near-black with a cold cast, so accents scream --- */
+  --void-950: #06070b;
+  --void-900: #0b0d13;
+  --void-800: #11141c;
+  --void-700: #181c26;
+  --void-600: #222735;
+  --void-500: #333a4c;
+  --void-400: #4d5568;
+
+  --line: rgba(150, 210, 255, 0.13);
+  --line-strong: rgba(120, 225, 255, 0.34);
+
+  /* --- type: cold white, never warm --- */
+  --ink: #eef6ff;
+  --ink-dim: #9fb0c4;
+  --muted: #66748a;
+  --faint: rgba(102, 116, 138, 0.62);
+
+  /* --- the three accents --- */
+  --cursed: #35d6ff;        /* cursed energy blue */
+  --cursed-hi: #8af0ff;
+  --cursed-dim: #157a99;
+  --sukuna: #e01e37;        /* blood red — opponent / danger only */
+  --sukuna-hi: #ff4d5e;
+  --violet: #a855f7;        /* rare, ominous */
+  --violet-hi: #c98bff;
+
+  /* --- type stacks --- */
+  --font-display: 'Grenze', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Spectral', Georgia, 'Times New Roman', serif;
+
+  /* legacy aliases so nothing referencing older names breaks */
+  --bg: var(--void-950);
+  --s-900: var(--void-950);
+  --s-800: var(--void-900);
+  --s-700: var(--void-800);
+  --s-600: var(--void-700);
+  --iron-950: var(--void-950);
+  --iron-900: var(--void-900);
+  --iron-800: var(--void-800);
+  --iron-700: var(--void-700);
+  --iron-600: var(--void-600);
+  --iron-500: var(--void-500);
+  --iron-400: var(--void-400);
+  --accent: var(--cursed);
+  --accent-hi: var(--cursed-hi);
+  --candle: var(--cursed);
+  --candle-hi: var(--cursed-hi);
+  --candle-dim: var(--cursed-dim);
+  --alarm: var(--sukuna);
+  --blood: var(--sukuna);
+  --blood-hi: var(--sukuna-hi);
+  --mana: var(--cursed);
+  --gold: var(--cursed-hi);
+}
+
+
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; height: 100dvh; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-feature-settings: 'liga' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The R3F canvas fills the screen; overlays sit on top. */
+canvas { position: fixed; inset: 0; touch-action: none; }
+
+/* ---------- Main menu ---------- */
+.overlay {
+  position: fixed; inset: 0;
+  /* flex-start + margin:auto on the card, NOT align-items:center: a centred
+     flex child taller than the screen overflows upward, and that part can never
+     be scrolled to — on a phone the title, name and first spells were cut off. */
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:
+    radial-gradient(130% 90% at 50% 0%, rgba(150, 100, 255, 0.16), transparent 62%),
+    linear-gradient(180deg, rgba(7, 5, 18, 0.55), rgba(5, 3, 13, 0.88));
+  overflow: auto;
+}
+.card {
+  width: min(760px, 96vw);
+  margin: auto; /* centres when it fits, stays scrollable when it does not */
+  background: linear-gradient(168deg, var(--s-600), var(--s-800));
+  border: 1px solid var(--line);
+  padding: 30px 30px 24px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(200, 175, 255, 0.12);
+  backdrop-filter: blur(10px);
+  /* cut corner, matching the in-game plates and cards */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%);
+  animation: oRise 0.5s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.brand { text-align: center; margin-bottom: 22px; }
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(38px, 9.5vw, 74px);
+  /* A display face carries its own character; heavy tracking fights it.
+     The previous 14px of letter-spacing was compensating for a UI font that
+     had nothing to say. */
+  letter-spacing: clamp(1px, 0.5vw, 4px);
+  font-weight: 900; line-height: 0.92;
+  color: var(--ink);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 44px rgba(217, 164, 65, 0.16);
+}
+.brandRule {
+  height: 1px; margin: 12px auto 10px; max-width: 380px;
+  background: linear-gradient(90deg, transparent, rgba(180, 150, 255, 0.55), transparent);
+}
+.tag {
+  color: var(--muted); margin: 0; font-size: clamp(12px, 2.8vw, 14px);
+  letter-spacing: 0.4px; max-width: 52ch; margin-inline: auto;
+}
+
+.sectionHead {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700; letter-spacing: 1.6px;
+  text-transform: uppercase; color: var(--ink-dim); margin-bottom: 10px;
+}
+.sectionHead::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, rgba(160, 130, 240, 0.34), transparent);
+}
+.sectionHead em { color: var(--candle); font-style: normal; font-weight: 900; }
+
+.row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.row > span {
+  width: 62px; flex: none; color: var(--muted);
+  font-family: var(--font-display); font-size: 12px; font-weight: 700;
+  letter-spacing: 1.4px; text-transform: uppercase;
+}
+input {
+  flex: 1; min-width: 0; background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(160, 120, 255, 0.3); border-radius: 2px;
+  color: var(--ink); padding: 11px 13px; font-size: 15px; letter-spacing: 1.5px;
+  font-family: inherit; font-weight: 700;
+}
+input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(176, 108, 255, 0.16); }
+
+/* ---------- spellbook picker ---------- */
+.deck { margin-bottom: 22px; }
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 7px; }
+.chip {
+  position: relative; display: flex; align-items: center; gap: 7px;
+  background: rgba(0, 0, 0, 0.34); border: 1px solid rgba(120, 110, 150, 0.28);
+  color: var(--muted); padding: 8px 10px; border-radius: 2px;
+  font-size: 12.5px; font-family: inherit; font-weight: 700; cursor: pointer;
+  transition: transform 0.09s ease, border-color 0.15s, background 0.15s, color 0.15s;
+  text-align: left;
+}
+.chip:hover { transform: translateY(-1px); border-color: rgba(180, 150, 255, 0.5); }
+.chip .glyph { flex: none; width: 20px; height: 20px; opacity: 0.65; transition: opacity 0.15s; }
+.chip.on { background: rgba(120, 80, 220, 0.18); color: var(--ink); }
+.chip.on .glyph { opacity: 1; }
+/* left accent stripe in the spell's own colour marks a picked spell */
+.chip.on::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: currentColor; box-shadow: 0 0 8px currentColor;
+}
+
+/* ---------- mode panels ---------- */
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 620px) { .modes { grid-template-columns: 1fr; } }
+.mode {
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(160, 120, 255, 0.16);
+  padding: 16px 16px 18px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+}
+.mode h3 {
+  margin: 0 0 6px; font-family: var(--font-display); font-size: 19px;
+  font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink);
+}
+.mode p { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--ink-dim); min-height: 38px; }
+.diff { display: flex; gap: 6px; margin-bottom: 11px; }
+.pill {
+  flex: 1; background: rgba(0, 0, 0, 0.32); border: 1px solid rgba(120, 110, 150, 0.28);
+  color: var(--muted); padding: 9px 6px; border-radius: 1px; cursor: pointer;
+  font-size: 12.5px; font-family: var(--font-display); font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase; transition: all 0.15s;
+}
+.pill:hover { border-color: rgba(180, 150, 255, 0.45); }
+.pill.on { border-color: var(--cursed); color: var(--cursed-hi); background: rgba(53, 214, 255, 0.10); }
+.go {
+  width: 100%; border: none; cursor: pointer; color: #0a0612; font-weight: 900;
+  padding: 14px; border-radius: 1px; font-size: 15px;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  font-family: var(--font-display); font-weight: 700;
+  background: linear-gradient(180deg, var(--cursed-hi), var(--cursed));
+  transition: transform 0.1s, filter 0.15s;
+}
+.go:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.12); }
+.go.alt { background: none; color: var(--accent-hi); border: 1px solid var(--line-strong); }
+.go:disabled { opacity: 0.35; cursor: not-allowed; }
+.joinRow { display: flex; gap: 8px; margin-top: 8px; }
+.joinRow input { text-align: center; font-weight: 800; letter-spacing: 4px; }
+.joinRow .go { width: auto; padding: 13px 18px; }
+.joinRow input { width: 0; letter-spacing: 3px; }
+.joinRow input::placeholder { letter-spacing: 2px; color: var(--muted); }
+
+/* ---------- online panel ---------- */
+.mode.online { border-color: rgba(53, 214, 255, 0.28); box-shadow: inset 0 0 40px rgba(53, 214, 255, 0.05); }
+.mode.online.invited { border-color: var(--cursed); box-shadow: 0 0 0 1px var(--cursed), inset 0 0 50px rgba(53, 214, 255, 0.1); }
+.onlineCount {
+  display: flex; align-items: center; gap: 8px; margin: -4px 0 12px;
+  font-family: var(--font-display); font-size: 12px; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--cursed-hi);
+}
+.liveDot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--cursed); box-shadow: 0 0 10px var(--cursed);
+  animation: livePulse 1.6s ease-in-out infinite;
+}
+@keyframes livePulse { 50% { opacity: 0.35; transform: scale(0.8); } }
+.orLine {
+  display: flex; align-items: center; gap: 10px; margin: 12px 0 2px;
+  color: var(--muted); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+  font-family: var(--font-display);
+}
+.orLine::before, .orLine::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+/* ---------- online lobby ---------- */
+.lobby {
+  position: fixed; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+           max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: radial-gradient(80% 70% at 50% 45%, rgba(6, 7, 11, 0.55), rgba(6, 7, 11, 0.9));
+}
+.lobbyCard {
+  width: min(440px, 100%); text-align: center;
+  background: linear-gradient(168deg, var(--void-700), var(--void-900));
+  border: 1px solid var(--line-strong);
+  padding: 28px 26px 20px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.72), 0 0 60px rgba(53, 214, 255, 0.08);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+  animation: oRise 0.45s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.lobbyCard h2 {
+  margin: 6px 0 8px; font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(24px, 6vw, 32px); letter-spacing: 1px; text-transform: uppercase;
+}
+.lobbySigil { width: 112px; height: 112px; margin: 0 auto; color: var(--cursed); filter: drop-shadow(0 0 14px rgba(53, 214, 255, 0.55)); }
+.lobbySigil svg { width: 100%; height: 100%; overflow: visible; }
+.lobbySigil .ringOuter { transform-origin: 60px 60px; animation: spin 9s linear infinite; }
+.lobbySigil .ringInner { transform-origin: 60px 60px; animation: spin 5s linear infinite reverse; }
+.lobbySigil .core { transform-origin: 60px 60px; animation: livePulse 1.4s ease-in-out infinite; }
+.lobbySigil.broken { color: var(--sukuna); filter: drop-shadow(0 0 14px rgba(224, 30, 55, 0.5)); }
+.lobbySigil.broken .ringOuter, .lobbySigil.broken .ringInner { animation-duration: 40s; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.lobbyStatus { margin: 0 0 14px; color: var(--ink-dim); font-size: 14px; line-height: 1.5; }
+.lobbyMeta {
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12.5px; letter-spacing: 0.6px; font-variant-numeric: tabular-nums;
+}
+.lobbyHint { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.lobbyHint p { margin: 0 0 12px; color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+.lobbyBtns { display: grid; gap: 8px; }
+.lobbyCancel {
+  margin-top: 14px; background: none; border: none; cursor: pointer;
+  color: var(--muted); font-family: var(--font-display); font-size: 13px;
+  letter-spacing: 1.4px; text-transform: uppercase; padding: 8px 14px;
+}
+.lobbyCancel:hover { color: var(--ink); }
+.roomCode { display: flex; justify-content: center; gap: 6px; margin: 6px 0 14px; }
+.roomCode span {
+  width: clamp(38px, 11vw, 48px); padding: 10px 0;
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(24px, 7vw, 32px);
+  color: var(--cursed-hi); background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--line-strong); text-shadow: 0 0 16px rgba(53, 214, 255, 0.6);
+}
+.ping {
+  pointer-events: none; font-size: 11.5px; font-weight: 700;
+  padding: 6px 9px; border-radius: 8px; background: rgba(16, 12, 28, 0.7);
+  color: #7ee0a0; font-variant-numeric: tabular-nums;
+}
+.ping.meh { color: #f2c86b; }
+.ping.bad { color: var(--sukuna-hi); }
+
+/* ---------- rival found ---------- */
+.lobbyCard.found { padding-block: 30px 24px; }
+.foundTag {
+  font-family: var(--font-display); font-size: 12px; letter-spacing: 2.4px;
+  text-transform: uppercase; color: var(--cursed-hi);
+}
+.versus {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 16px 0 12px;
+}
+.vName {
+  font-family: var(--font-display); font-weight: 900; font-size: clamp(22px, 6vw, 30px);
+  text-transform: uppercase; letter-spacing: 1px; max-width: 42%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* No glow here: overflow:hidden (needed for the ellipsis) clips a text-shadow
+   to the element's box, which drew a dark rectangle behind each name. */
+.vName.you { color: var(--cursed-hi); }
+.vName.foe { color: var(--sukuna-hi); }
+.vs { color: var(--muted); font-family: var(--font-display); font-size: 14px; letter-spacing: 2px; }
+
+/* ---------- 3-2-1 countdown ---------- */
+.countdown {
+  position: fixed; left: 50%; top: 42%; z-index: 30; pointer-events: none;
+  font-family: var(--font-display); font-weight: 900; line-height: 1;
+  font-size: clamp(96px, 26vw, 200px); color: var(--ink);
+  text-shadow: 0 0 40px rgba(53, 214, 255, 0.65), 0 4px 0 rgba(0, 0, 0, 0.6);
+  animation: cdPop 0.95s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.countdown.go {
+  color: var(--cursed-hi); font-size: clamp(64px, 18vw, 150px); letter-spacing: 0.08em;
+  animation: cdGo 0.8s ease-out both;
+}
+@keyframes cdPop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
+  25% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, -50%) scale(0.96); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+}
+@keyframes cdGo {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown, .countdown.go { animation: none; transform: translate(-50%, -50%); }
+}
+
+/* ---------- account card (main menu) ---------- */
+.account { margin: 22px 0 0; }
+.accountLoading { color: var(--muted); font-size: 13px; }
+.accountBlurb { margin: 0 0 10px; color: var(--ink-dim); font-size: 13px; line-height: 1.5; }
+.accountBlurb b { color: var(--cursed-hi); }
+.accountRecord { font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.accountRecord.muted { color: var(--muted); margin-bottom: 12px; }
+.accountError { margin-top: 10px; color: var(--sukuna-hi); font-size: 13px; }
+
+.signInRow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 520px) { .signInRow { grid-template-columns: 1fr; } }
+/* Provider buttons follow each provider's own look: Apple's is black with
+   white text, Google's white with its multicolour mark. */
+.signIn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 0 14px; border-radius: 6px; cursor: pointer;
+  font: 600 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  border: 1px solid transparent;
+}
+.signIn.apple { background: #000; color: #fff; border-color: #3a3a3a; }
+.signIn.apple span { font-size: 18px; line-height: 1; margin-top: -2px; }
+.signIn.google { background: #fff; color: #1f1f1f; border-color: #dadce0; }
+.gMark {
+  display: inline-grid; place-items: center; width: 18px; height: 18px;
+  font: 700 14px Arial, sans-serif;
+  background: conic-gradient(#4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.linkBtn {
+  background: none; border: none; cursor: pointer; padding: 6px 4px;
+  color: var(--cursed-hi); font: inherit; font-size: 13px;
+}
+.linkBtn:hover { text-decoration: underline; }
+
+.profileRow { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.profileMain { min-width: 0; }
+.profileName {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--ink);
+}
+.renameRow { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.renameRow .go { width: auto; padding: 10px 14px; }
+.ratingBadge {
+  flex: none; display: grid; justify-items: center; padding: 8px 14px;
+  border: 1px solid var(--line-strong); background: rgba(53, 214, 255, 0.06);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+}
+.ratingNum { font-family: var(--font-display); font-weight: 900; font-size: 26px; color: var(--cursed-hi); line-height: 1; }
+.ratingLabel { font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+.accountActions { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.accountActions .go { width: auto; padding: 11px 18px; }
+
+/* ---------- leaderboard ---------- */
+.boardCard { width: min(520px, 100%); text-align: left; }
+.boardTabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.boardList {
+  list-style: none; margin: 0; padding: 0;
+  max-height: min(60vh, 520px); overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+}
+.boardList li {
+  display: grid; grid-template-columns: 38px 1fr auto 56px; gap: 10px; align-items: center;
+  padding: 9px 6px; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+.boardList .pos { color: var(--muted); font-family: var(--font-display); font-weight: 700; }
+.boardList .who { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boardList .rec { color: var(--muted); font-size: 12px; }
+.boardList .rt { text-align: right; color: var(--cursed-hi); font-weight: 700; }
+.boardList li.me { background: rgba(53, 214, 255, 0.08); box-shadow: inset 3px 0 0 var(--cursed); }
+.boardList.history li.won .pos { color: #7ee0a0; }
+.boardList.history li.lost .pos { color: var(--sukuna-hi); }
+
+/* ---------- rating change on the result card ---------- */
+.oRating { margin-top: 8px; font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: 1px; }
+.oRating.up { color: #7ee0a0; }
+.oRating.down { color: var(--sukuna-hi); }
+
+.status {
+  margin-top: 16px; text-align: center; color: var(--gold); font-size: 13px;
+  letter-spacing: 0.5px; background: rgba(255, 210, 74, 0.08);
+  border: 1px solid rgba(255, 210, 74, 0.25); padding: 10px; border-radius: 2px;
+}
+.vrLine {
+  margin-top: 16px; text-align: center; font-size: 12px;
+  color: rgba(155, 143, 192, 0.8); letter-spacing: 0.3px;
+}
+.vrLine b { color: var(--ink); }
+
+/* Install-as-app banner (in the menu card) */
+.install {
+  margin-top: 18px; display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(176, 108, 255, 0.14), rgba(127, 180, 255, 0.1));
+  border: 1px solid rgba(160, 120, 255, 0.3);
+}
+.installIcon { font-size: 18px; }
+.installTxt { flex: 1; font-size: 12.5px; color: var(--ink); }
+.installTxt b { color: var(--gold); }
+.installTxt .sh { font-family: system-ui; }
+.installBtn {
+  border: none; cursor: pointer; color: #0a0612; font-weight: 900; font-size: 11.5px;
+  letter-spacing: 1.4px; text-transform: uppercase; font-family: inherit;
+  padding: 9px 15px; border-radius: 2px; background: linear-gradient(90deg, #ffd24a, #ff9a3a);
+}
+.installX {
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 4px 6px; line-height: 1;
+}
+
+/* ---------- In-game top bar ---------- */
+.gamebar {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(10px + env(safe-area-inset-left));
+  right: calc(10px + env(safe-area-inset-right));
+  display: flex; align-items: center; gap: 8px; z-index: 20;
+  pointer-events: none;
+}
+/* Named gbtn, not bar: the HUD's health and mana gauges are also `.bar`, and
+   that later rule (fixed height, overflow hidden) was slicing these buttons. */
+.gbtn {
+  pointer-events: auto; cursor: pointer; border-radius: 10px; font-size: 13px; font-weight: 700;
+  padding: 9px 13px; border: 1px solid rgba(160, 120, 255, 0.35);
+  background: rgba(16, 12, 28, 0.86); color: var(--ink); backdrop-filter: blur(6px);
+  font-family: inherit; line-height: 1.2;
+}
+.gbtn.vr { border-color: var(--gold); color: var(--gold); }
+.gbtn.again { border-color: #7fb4ff; color: #7fb4ff; }
+.gbtn.mute { padding: 9px 11px; }
+.barStatus {
+  pointer-events: none; margin-left: auto; font-size: 12.5px; color: var(--muted);
+  background: rgba(16, 12, 28, 0.7); padding: 8px 12px; border-radius: 10px;
+}
+
+/* ---------- Lane battle HUD ---------- */
+.laneTop {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  width: min(560px, 92vw); z-index: 10; pointer-events: none; text-align: center;
+}
+.crystalLabel { font-size: 12px; color: #ffb0c0; letter-spacing: 1px; margin-bottom: 5px; text-shadow: 0 1px 3px #000; }
+.hpTrack {
+  height: 16px; border-radius: 9px; overflow: hidden;
+  background: rgba(8, 6, 16, 0.8); border: 1px solid rgba(255, 120, 140, 0.35);
+}
+.hpTrack.sm { height: 12px; flex: 1; }
+.hpFill { height: 100%; transition: width 0.12s linear; border-radius: 9px; }
+.hpFill.foe { background: linear-gradient(90deg, #ff3a5a, #ff8a6a); }
+.hpFill.you { background: linear-gradient(90deg, #5be08a, #9bffba); }
+.hpFill.mana { background: linear-gradient(90deg, #4aa8ff, #9bd4ff); }
+
+.castFlash {
+  position: fixed; top: 16%; left: 50%; transform: translateX(-50%);
+  font-size: 30px; font-weight: 900; letter-spacing: 1px; z-index: 11; pointer-events: none;
+  text-shadow: 0 2px 10px #000, 0 0 24px currentColor; animation: castPop 0.7s ease-out forwards;
+}
+@keyframes castPop { 0% { opacity: 0; transform: translateX(-50%) scale(0.7); } 20% { opacity: 1; transform: translateX(-50%) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-20px); } }
+
+.laneDock {
+  position: fixed; bottom: 10px; left: 10px; right: 10px; z-index: 10;
+  display: flex; align-items: flex-end; gap: 10px; pointer-events: none; flex-wrap: wrap;
+}
+.laneDock .bar.leave { pointer-events: auto; }
+.dockBars { display: flex; flex-direction: column; gap: 6px; min-width: 200px; flex: 1; max-width: 340px; }
+.miniRow { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink); }
+.miniRow span { width: 96px; color: var(--muted); }
+.miniRow b { width: 26px; text-align: right; color: #9bd4ff; }
+.miniRow .hpTrack { background: rgba(8, 6, 16, 0.8); border-color: rgba(120, 110, 150, 0.3); }
+
+.spellbook {
+  display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; margin-left: auto;
+  background: rgba(12, 9, 22, 0.6); padding: 7px; border-radius: 12px;
+  border: 1px solid rgba(160, 120, 255, 0.18);
+}
+.spellChip {
+  display: flex; flex-direction: column; align-items: center; min-width: 52px;
+  padding: 5px 7px; border-radius: 9px; border: 1px solid; background: rgba(0, 0, 0, 0.35);
+  transition: opacity 0.15s;
+}
+.spellChip.broke { opacity: 0.38; }
+.spellChip .se { font-size: 17px; line-height: 1; }
+.spellChip .sn { font-size: 10px; color: var(--ink); margin-top: 2px; }
+.spellChip .sc { font-size: 10px; color: var(--gold); font-weight: 700; }
+
+.endCard { text-align: center; }
+.endCard .winTitle, .endCard .loseTitle {
+  font-size: 40px; font-weight: 900; letter-spacing: 4px; margin: 0 0 8px;
+}
+.endCard .winTitle { color: var(--gold); }
+.endCard .loseTitle { color: #ff5160; }
+
+@media (max-width: 560px) {
+  .spellbook { width: 100%; margin-left: 0; justify-content: center; }
+  .dockBars { max-width: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ARENA DUEL HUD
+   The whole layer is click-through so the player can draw anywhere on the
+   canvas; only the end-screen buttons opt back into pointer events.
+   Sizing uses clamp() throughout so one layout serves phone-portrait through
+   desktop without breakpoint-by-breakpoint rewrites.
+   ═══════════════════════════════════════════════════════════════════════ */
+.hud { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
+
+/* ---------- damage vignette ---------- */
+/* Sits above the canvas but below the HUD chrome, so bars stay readable while
+   the screen edges flare red. Opacity is written per-frame from the feel store. */
+.dmgVig {
+  position: fixed; inset: 0; z-index: 14; pointer-events: none; opacity: 0;
+  background: radial-gradient(120% 100% at 50% 50%,
+    rgba(224, 30, 55, 0) 40%, rgba(224, 30, 55, 0.38) 76%, rgba(150, 6, 26, 0.72) 100%);
+  mix-blend-mode: screen;
+}
+
+/* ---------- fighter plates ---------- */
+.hudTop {
+  position: fixed; left: 0; right: 0;
+  /* clears the game bar (buttons are ~38px tall at 10px inset) */
+  top: calc(70px + env(safe-area-inset-top));
+  padding-left: calc(12px + env(safe-area-inset-left));
+  padding-right: calc(12px + env(safe-area-inset-right));
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: clamp(6px, 2vw, 18px);
+}
+
+.plate {
+  display: flex; align-items: stretch; gap: 9px;
+  flex: 0 1 auto; min-width: 0; width: clamp(190px, 32%, 340px);
+  padding: 8px 12px 9px 8px;
+  background: linear-gradient(160deg, var(--iron-700), var(--iron-900));
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--cursed);
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(190, 165, 255, 0.14);
+  backdrop-filter: blur(8px);
+  /* angled corner on the outer edge — squares read as web UI, the cut reads
+     as a game frame */
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+}
+.plate.foe {
+  flex-direction: row-reverse;
+  padding: 8px 8px 9px 12px;
+  border-color: var(--line);
+  border-left: 1px solid var(--line);
+  border-right: 2px solid var(--sukuna);
+  background: linear-gradient(200deg, var(--iron-700), var(--iron-900));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.plate.foe .pbody { text-align: right; }
+.plate.foe .prow { flex-direction: row-reverse; }
+
+/* low-health alarm */
+.plate.critical { animation: platePulse 1s ease-in-out infinite; }
+@keyframes platePulse {
+  0%, 100% { border-color: rgba(255, 70, 90, 0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
+  50% { border-color: rgba(255, 70, 90, 0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.55), 0 0 22px rgba(255, 50, 70, 0.45); }
+}
+
+.sigil {
+  flex: none; width: clamp(34px, 8vw, 46px); aspect-ratio: 1;
+  display: grid; place-items: center;
+  background: linear-gradient(160deg, var(--s-700), var(--s-900));
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+.plate.foe .sigil { border-color: rgba(224, 30, 55, 0.45); }
+.sigil svg { width: 84%; height: 84%; }
+
+.pbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.prow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pname {
+  font-family: var(--font-display);
+  font-size: clamp(12px, 3vw, 16px); font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink);
+  text-shadow: 0 1px 4px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.phpnum { flex: none; font-variant-numeric: tabular-nums; text-shadow: 0 1px 4px #000; }
+.phpnum b { font-family: var(--font-display); font-size: clamp(14px, 3.4vw, 19px); font-weight: 900; color: var(--ink); }
+.phpnum i { font-style: normal; font-size: 9px; color: var(--muted); margin-left: 2px; }
+
+/* ---------- bars ---------- */
+.bar {
+  position: relative; overflow: hidden;
+  height: clamp(9px, 2.2vw, 13px);
+  background: rgba(4, 3, 10, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 2px;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; display: block; }
+
+/* the slow "recent damage" layer, behind the live value */
+/* the recent-damage layer is the ONLY place a hot orange appears, so a
+   chunk of damage is unmistakable */
+.bar .lag { background: linear-gradient(180deg, var(--sukuna-hi), #7a0d18); opacity: 0.95; }
+.hpbar .val { background: linear-gradient(180deg, var(--cursed-hi) 0%, var(--cursed) 48%, var(--cursed-dim) 100%); }
+.plate.foe .hpbar .val { background: linear-gradient(180deg, var(--sukuna-hi) 0%, var(--sukuna) 48%, #6b0a19 100%); }
+/* specular sheen along the top of the fill sells it as a lit surface */
+.bar .val::after {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 40%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0));
+}
+.bar .val { position: absolute; }
+
+.bar .ticks {
+  width: 100%; pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    rgba(0,0,0,0) 0 calc(25% - 1px), rgba(0,0,0,0.55) calc(25% - 1px) 25%);
+}
+
+/* shield overlay — reads on top of health, since that is what it protects */
+.bar .shield {
+  background: repeating-linear-gradient(115deg,
+    rgba(127, 212, 255, 0.85) 0 5px, rgba(90, 170, 255, 0.55) 5px 10px);
+  box-shadow: 0 0 10px rgba(127, 212, 255, 0.7);
+  transition: opacity 0.2s;
+}
+
+.manabar { height: clamp(5px, 1.4vw, 8px); }
+.manabar .val { background: linear-gradient(180deg, var(--violet-hi), var(--violet)); }
+
+.vsMark {
+  flex: none; align-self: center; margin-top: clamp(4px, 1.5vw, 12px);
+  font-size: clamp(10px, 2.4vw, 13px); font-weight: 900; letter-spacing: 3px;
+  color: rgba(200, 180, 255, 0.55); text-shadow: 0 2px 8px #000;
+}
+
+/* ---------- cast feedback ---------- */
+.castToast {
+  position: fixed; left: 50%; top: 24%; transform: translateX(-50%);
+  text-align: center; white-space: nowrap; color: var(--c);
+  animation: toastPop 1.15s cubic-bezier(0.2, 1.1, 0.4, 1) forwards;
+}
+.castToast b {
+  display: block; font-family: var(--font-display);
+  font-size: clamp(24px, 7.5vw, 48px); font-weight: 900;
+  letter-spacing: 1px; text-transform: uppercase; line-height: 1;
+  text-shadow: 0 3px 16px #000, 0 0 30px var(--c);
+}
+.castToast em {
+  display: block; margin-top: 4px; font-style: normal;
+  font-size: clamp(10px, 2.8vw, 14px); font-weight: 700; letter-spacing: 2px;
+  color: #fff; opacity: 0.85; text-shadow: 0 2px 8px #000;
+}
+.castToast.perfect b { text-shadow: 0 3px 16px #000, 0 0 44px var(--c), 0 0 80px var(--c); }
+.castToast.bad { animation-name: toastShake; }
+@keyframes toastPop {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.7); }
+  14% { opacity: 1; transform: translateX(-50%) scale(1.12); }
+  26% { transform: translateX(-50%) scale(1); }
+  72% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-26px); }
+}
+@keyframes toastShake {
+  0% { opacity: 0; }
+  10% { opacity: 1; transform: translateX(-50%) translateX(-7px); }
+  22% { transform: translateX(-50%) translateX(7px); }
+  34% { transform: translateX(-50%) translateX(-4px); }
+  46% { transform: translateX(-50%) translateX(0); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-18px); }
+}
+
+/* ---------- spellbook ---------- */
+.book {
+  position: fixed; left: 0; right: 0;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  padding-left: calc(10px + env(safe-area-inset-left));
+  padding-right: calc(10px + env(safe-area-inset-right));
+  display: flex; justify-content: center; align-items: flex-end;
+  gap: clamp(4px, 1.4vw, 10px);
+}
+.scard {
+  position: relative; overflow: hidden;
+  width: clamp(54px, 14.5vw, 86px); aspect-ratio: 3 / 4;
+  border: 1px solid color-mix(in srgb, var(--sp) 50%, transparent);
+  border-radius: 3px;
+  background: linear-gradient(170deg, var(--s-700), var(--s-900));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(6px);
+  display: flex; flex-direction: column;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+  transition: opacity 0.18s, transform 0.14s, border-color 0.18s;
+}
+/* coloured wash behind the glyph, brightest when the spell is castable */
+.sglow {
+  position: absolute; inset: 0; opacity: 0.16; transition: opacity 0.2s;
+  background: radial-gradient(70% 55% at 50% 34%, var(--sp), transparent 70%);
+}
+.scard.ready { border-color: color-mix(in srgb, var(--sp) 95%, transparent); }
+.scard.ready .sglow { opacity: 0.34; }
+.scard.ready { transform: translateY(-2px); }
+.scard.broke { opacity: 0.34; }
+.scard.cooling { opacity: 0.68; }
+
+.srune { position: relative; width: 100%; flex: 1; padding: 7px 7px 0; filter: drop-shadow(0 0 6px var(--sp)); }
+.cdveil {
+  position: absolute; inset: 0; background: rgba(3, 2, 8, 0.78);
+  transform-origin: top; transform: scaleY(0); pointer-events: none;
+}
+.cdnum {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: clamp(13px, 3.6vw, 19px); font-weight: 900; color: #fff;
+  text-shadow: 0 2px 8px #000; font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.sfoot {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 4px 6px 6px; font-size: clamp(8.5px, 2.3vw, 11px);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.sfoot b {
+  color: var(--ink); font-family: var(--font-display); font-weight: 700; letter-spacing: 0.2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.scost {
+  flex: none; color: #9bd4ff; font-weight: 900;
+  display: inline-flex; align-items: center; gap: 2px;
+}
+.scost::before {
+  content: ''; width: 5px; height: 5px; background: #3aa0ff;
+  transform: rotate(45deg); box-shadow: 0 0 5px #3aa0ff;
+}
+
+/* ---------- end screen ---------- */
+.outcome {
+  position: fixed; inset: 0; z-index: 40; pointer-events: auto;
+  display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(10, 6, 20, 0.4), rgba(5, 3, 12, 0.9));
+  backdrop-filter: blur(4px); animation: fade 0.4s ease-out both;
+}
+.oCard {
+  width: min(460px, 92vw); text-align: center; padding: 28px 26px 24px;
+  background: linear-gradient(170deg, var(--s-600), var(--s-800));
+  border: 1px solid rgba(160, 120, 255, 0.3);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.75);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+  animation: oRise 0.45s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+@keyframes oRise { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+.oRule {
+  height: 1px; margin: 0 auto 16px;
+  background: linear-gradient(90deg, transparent, rgba(180, 150, 255, 0.5), transparent);
+}
+.oRule + .oTitle { margin-top: -4px; }
+.oBtns + .oRule, .oSub + .oRule { margin: 18px auto 18px; }
+.oTitle {
+  font-family: var(--font-display);
+  font-size: clamp(44px, 13vw, 76px); font-weight: 900; letter-spacing: 2px;
+  line-height: 0.94; margin-bottom: 10px;
+}
+.oCard.win .oTitle { color: var(--cursed-hi); text-shadow: 0 0 40px rgba(53, 214, 255, 0.55); }
+.oCard.lose .oTitle { color: var(--sukuna-hi); text-shadow: 0 0 40px rgba(224, 30, 55, 0.5); }
+.oCard.draw .oTitle { color: #cddcff; }
+.oSub { color: var(--muted); font-size: 13.5px; letter-spacing: 0.4px; }
+.oBtns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+/* three choices stack full-width so they stay tappable on a phone */
+.oBtns.stacked { flex-direction: column; align-items: stretch; max-width: 320px; margin-inline: auto; }
+.oBtns.stacked .oBtn { width: 100%; }
+.oCard.win .oTitle.fled { color: #f2c86b; text-shadow: 0 0 40px rgba(242, 200, 107, 0.45); }
+.oBtn {
+  pointer-events: auto; cursor: pointer; min-height: 48px; padding: 13px 26px;
+  border-radius: 1px; font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  border: 1px solid rgba(160, 120, 255, 0.4); background: rgba(0, 0, 0, 0.35); color: var(--ink);
+  transition: transform 0.1s, filter 0.15s;
+}
+.oBtn:hover { transform: translateY(-1px); filter: brightness(1.15); }
+.oBtn.primary { border: none; color: var(--s-900); background: linear-gradient(100deg, var(--accent), var(--accent-hi)); }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- compact screens ---------- */
+@media (max-width: 430px) {
+  .plate { padding: 6px 8px 7px 6px; gap: 7px; width: 44%; }
+  .plate.foe { padding: 6px 6px 7px 8px; }
+  .book { gap: 4px; }
+  .vsMark { letter-spacing: 1px; }
+}
+/* landscape phone: the play area is short, so pull the chrome in tight */
+@media (max-height: 450px) {
+  .hudTop { top: calc(56px + env(safe-area-inset-top)); }
+  .scard { width: clamp(46px, 9.5vw, 66px); }
+  .castToast { top: 18%; }
+}
+
+/* Online panel when no match server is configured for this build. */
+.mode.off { opacity: 0.62; }
+.soon {
+  display: grid; place-items: center; min-height: 44px;
+  border: 1px dashed rgba(160, 120, 255, 0.35); border-radius: 2px;
+  color: var(--muted); font-size: 11px; font-weight: 800;
+  letter-spacing: 2.4px; text-transform: uppercase;
+}
+
+/* Graphics quality selector. Detection guesses from core count and memory,
+   which is wrong often enough on mobile that players need a manual override. */
+.quality { margin-top: 18px; }
+.qualityHint { margin: 8px 0 0; font-size: 11.5px; color: var(--muted); letter-spacing: 0.3px; }
+.qualityHint b { color: var(--gold); text-transform: uppercase; }
+
+/* ---------- dodge zone ----------
+   The lower band of the screen strafes instead of drawing. It is invisible
+   geometry, so it needs a visible affordance — but a loud one would compete
+   with the spellbook sitting on top of it, hence a hairline rail and a pip. */
+.moveBand {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  align-items: center; gap: 6px;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(120, 90, 220, 0.07));
+  transition: opacity 0.2s;
+}
+.moveRail {
+  position: relative; width: min(240px, 46vw); height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(170, 145, 255, 0.45), transparent);
+}
+.movePip {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 4px;
+  margin: -2px 0 0 -15px; border-radius: 2px;
+  background: #b9a3ff; box-shadow: 0 0 10px rgba(160, 130, 255, 0.9);
+}
+.moveHint {
+  font-size: 9.5px; letter-spacing: 2.4px; text-transform: uppercase;
+  color: rgba(180, 160, 240, 0.55); text-shadow: 0 1px 4px #000;
+}
+@media (max-height: 450px) { .moveHint { display: none; } }

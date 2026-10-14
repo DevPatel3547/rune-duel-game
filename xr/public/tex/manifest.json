@@ -1,0 +1,79 @@
+{
+  "textures": {
+    "cloth": {
+      "color": "tex/cloth_color.webp",
+      "nor_gl": "tex/cloth_nor_gl.webp",
+      "arm": "tex/cloth_arm.webp",
+      "Rough": "tex/cloth_Rough.webp"
+    },
+    "leather": {
+      "color": "tex/leather_color.webp",
+      "nor_gl": "tex/leather_nor_gl.webp",
+      "arm": "tex/leather_arm.webp",
+      "Rough": "tex/leather_Rough.webp"
+    },
+    "metal": {
+      "color": "tex/metal_color.webp",
+      "nor_gl": "tex/metal_nor_gl.webp",
+      "arm": "tex/metal_arm.webp",
+      "Rough": "tex/metal_Rough.webp"
+    },
+    "rock": {
+      "color": "tex/rock_color.webp",
+      "nor_gl": "tex/rock_nor_gl.webp",
+      "arm": "tex/rock_arm.webp",
+      "Rough": "tex/rock_Rough.webp"
+    },
+    "stone": {
+      "color": "tex/stone_color.webp",
+      "nor_gl": "tex/stone_nor_gl.webp",
+      "arm": "tex/stone_arm.webp",
+      "Rough": "tex/stone_Rough.webp"
+    }
+  },
+  "credits": [
+    {
+      "asset": "fabric_pattern_07",
+      "name": "cloth",
+      "authors": [
+        "Rob Tuytel"
+      ]
+    },
+    {
+      "asset": "leather_red_02",
+      "name": "leather",
+      "authors": [
+        "Rob Tuytel"
+      ]
+    },
+    {
+      "asset": "metal_plate",
+      "name": "metal",
+      "authors": [
+        "Rob Tuytel"
+      ]
+    },
+    {
+      "asset": "rock_wall_10",
+      "name": "rock",
+      "authors": [
+        "Amal Kumar"
+      ]
+    },
+    {
+      "asset": "concrete_wall_008",
+      "name": "stone",
+      "authors": [
+        "Dario Barresi",
+        "Charlotte Baglioni"
+      ]
+    },
+    {
+      "asset": "satara_night_no_lamps",
+      "name": "sky",
+      "authors": [
+        "Greg Zaal"
+      ]
+    }
+  ]
+}

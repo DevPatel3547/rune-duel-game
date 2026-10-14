@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Rune Duel app icon — source of truth for every icon size (rendered by
+    tools/render_icons.mjs). The Bolt rune traced inside a casting circle, in
+    the cursed-energy palette: near-black ground, one ferociously saturated blue,
+    a rare violet accent. Opaque on purpose: the App Store rejects icons with
+    transparency.
+  -->
+  <defs>
+    <radialGradient id="ground" cx="50%" cy="44%" r="72%">
+      <stop offset="0" stop-color="#1a2046"/>
+      <stop offset="0.5" stop-color="#0b0e1c"/>
+      <stop offset="1" stop-color="#04050a"/>
+    </radialGradient>
+    <radialGradient id="aura" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#35d6ff" stop-opacity="0.50"/>
+      <stop offset="0.42" stop-color="#1a8fb5" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#35d6ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#f2feff"/>
+      <stop offset="0.45" stop-color="#8af0ff"/>
+      <stop offset="1" stop-color="#2cc6f2"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="22" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#ground)"/>
+  <circle cx="512" cy="512" r="440" fill="url(#aura)"/>
+
+  <!-- casting circle -->
+  <g fill="none" stroke="#35d6ff" stroke-linecap="round" filter="url(#soft)">
+    <circle cx="512" cy="512" r="356" stroke-width="11" opacity="0.92"/>
+    <circle cx="512" cy="512" r="318" stroke-width="3.5" opacity="0.5" stroke-dasharray="4 24"/>
+    <g stroke-width="9" opacity="0.75">
+      <line x1="512" y1="130" x2="512" y2="176"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(30 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(60 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(90 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(120 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(150 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(180 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(210 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(240 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(270 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(300 512 512)"/>
+      <line x1="512" y1="130" x2="512" y2="176" transform="rotate(330 512 512)"/>
+    </g>
+    <polygon points="512,214 770,661 254,661" stroke-width="4" opacity="0.26"/>
+    <polygon points="512,810 254,363 770,363" stroke-width="4" opacity="0.26"/>
+  </g>
+
+  <!-- the rare violet: an inner ring of ominous energy -->
+  <circle cx="512" cy="512" r="236" fill="none" stroke="#a855f7" stroke-width="4" opacity="0.4" filter="url(#soft)"/>
+
+  <!-- the Bolt rune, one continuous stroke, the way it is drawn in the game -->
+  <path d="M600 198 L396 548 L566 548 L424 836" fill="none" stroke="url(#bolt)"
+        stroke-width="70" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M600 198 L396 548 L566 548 L424 836" fill="none" stroke="#ffffff"
+        stroke-width="20" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"/>
+</svg>

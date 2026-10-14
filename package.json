@@ -1,0 +1,37 @@
+{
+  "name": "rune-duel",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "client",
+    "xr"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,3d -c blue,magenta \"npm run dev -w server\" \"npm run dev -w xr\"",
+    "dev:server": "npm run dev -w server",
+    "dev:vr": "concurrently -n server,3d -c blue,magenta \"npm run dev -w server\" \"RD_HTTPS=1 npm run dev -w xr\"",
+    "dev:flat2d": "concurrently -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w xr",
+    "build:flat2d": "npm run build -w client",
+    "test": "node shared/test/run-tests.js && node shared/test/duel.test.js",
+    "test:smoke": "npm run smoke -w xr",
+    "test:online": "node server/test/e2e.js",
+    "test:online2p": "node xr/test/online2p.mjs",
+    "deploy:server": "flyctl deploy --ha=false",
+    "test:subpath": "VITE_BASE=/RuneDuel/ npm run build -w xr && node xr/test/subpath.mjs",
+    "shots": "node xr/test/shots.mjs",
+    "deploy": "npx --yes vercel@59 deploy --prod --yes --scope summoners",
+    "test:dodge": "node xr/test/dodge.mjs",
+    "shots:vfx": "node xr/test/vfxshot.mjs",
+    "shots:domain": "node xr/test/domainshot.mjs",
+    "test:live": "node xr/test/live.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "puppeteer-core": "^23.11.1",
+    "sharp": "^0.35.3"
+  }
+}
