@@ -3,6 +3,7 @@
 // direction-dependent runes (e.g. Pierce's diagonal vs other lines) distinct.
 
 import { TEMPLATES } from './templates.js';
+import { FIZZLE_THRESHOLD } from './spells.js';
 
 const NUM_POINTS = 64;
 const SQUARE_SIZE = 250;
@@ -136,5 +137,20 @@ export function recognize(points) {
     const score = Math.max(0, 1 - distanceAtBestAngle(stroke, tmpl) / HALF_DIAGONAL);
     if (score > best.score) best = { id, score };
   }
+  return best;
+}
+
+// Classify a stroke against a chosen set of runes — a player's spellbook.
+// Returns { spellId, score, fizzled }: the closest rune in `ids`, and whether
+// even that one is below the fizzle threshold. This is the function both the
+// client (instant feedback) and the match server (the copy that counts) run,
+// so the two can never disagree about what a drawing meant.
+export function recognizeAmong(points, ids) {
+  let best = { spellId: null, score: 0 };
+  for (const id of ids || []) {
+    const s = scoreAgainst(points, id);
+    if (s > best.score) best = { spellId: id, score: s };
+  }
+  best.fizzled = best.score < FIZZLE_THRESHOLD;
   return best;
 }

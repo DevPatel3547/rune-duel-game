@@ -49,8 +49,11 @@ node server/test/e2e.js
 
 ```
 shared/   spell data, rune templates, $1 gesture recognizer, combat resolution
-server/   Node + Socket.io — authoritative: re-recognizes strokes server-side
-          so a hacked client can't lie about its draw quality (anti-cheat)
+server/   Node + Socket.io — authoritative: re-recognizes each raw stroke against
+          the caster's spellbook itself and casts what IT recognizes; the
+          spell, accuracy and draw time a client claims are ignored
+          (shared/src/authority.js — draw time is floored by the server's own
+          clock over the live trail, since the stroke starts on the client)
 client/   React + Vite PWA — HTML5 Canvas drawing, all UI, Web Audio synth SFX.
           THE game. `npm run dev` / `npm run build`.
 xr/       a WebXR/VR experiment — NOT the product. Parked behind `npm run dev:vr`.

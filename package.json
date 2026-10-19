@@ -16,7 +16,7 @@
     "dev:flat2d": "concurrently -n server,client -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w xr",
     "build:flat2d": "npm run build -w client",
-    "test": "node shared/test/run-tests.js && node shared/test/duel.test.js",
+    "test": "node shared/test/run-tests.js && node shared/test/duel.test.js && node shared/test/authority.test.js",
     "test:smoke": "npm run smoke -w xr",
     "test:online": "node server/test/e2e.js",
     "test:online2p": "node xr/test/online2p.mjs",

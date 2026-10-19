@@ -300,7 +300,8 @@ export class OnlineDriver {
       return match;
     }
     this.set({ lastMatch: { ...match, at: performance.now() } });
-    // The server re-scores the raw points (anti-cheat) and is authoritative.
+    // The server re-recognizes the raw points against our deck itself and casts
+    // whatever IT recognizes; spellId is only a hint for logs and old servers.
     this.socket?.emit('cast', {
       spellId: match.spellId, points: points2d.slice(0, 1500), drawTime, x: this.get().move.x,
     });

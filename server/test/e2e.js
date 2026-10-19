@@ -5,7 +5,7 @@
 // Run: node server/test/e2e.js
 import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
-import { TEMPLATES, PROTOCOL_VERSION } from '@rune/shared';
+import { TEMPLATES, PROTOCOL_VERSION, judgeCast, computePower, DRAW_TIME } from '@rune/shared';
 
 const PORT = 3107;
 const SERVER = `http://localhost:${PORT}`;
@@ -44,6 +44,17 @@ const once = (s, event, ms = 8000) => new Promise((resolve, reject) => {
   s.once(event, (d) => { clearTimeout(t); resolve(d); });
 });
 const call = (s, event, data) => new Promise((resolve) => s.emit(event, data, resolve));
+// Resolve with the next 'cast' event made by `side`, ignoring other traffic.
+const castBy = (s, side, ms = 4000) => new Promise((resolve, reject) => {
+  const t = setTimeout(() => { s.off('events', h); reject(new Error(`timed out waiting for a cast by side ${side}`)); }, ms);
+  const h = ({ events }) => {
+    const e = events.find((x) => x.type === 'cast' && x.by === side);
+    if (e) { clearTimeout(t); s.off('events', h); resolve(e); }
+  };
+  s.on('events', h);
+});
+// A stroke that bounces between the four corners: it is not any rune.
+const scrawl = Array.from({ length: 64 }, (_, i) => [{ x: 0, y: 0 }, { x: 300, y: 300 }, { x: 300, y: 0 }, { x: 0, y: 300 }][i % 4]);
 const ready = (...ss) => Promise.all(ss.map((s) => (s.connected ? null : once(s, 'connect'))));
 
 // Simulate a human drawing: template points scaled to px with a little jitter.
@@ -113,7 +124,7 @@ try {
   {
     const ack = once(q1, 'cast_ack');
     q1.emit('cast', { spellId: 'bolt', points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], drawTime: 0.5 });
-    check((await ack).fizzled, 'the server re-scores strokes: an invalid stroke fizzles');
+    check((await ack).fizzled, 'the server re-recognizes strokes: an invalid stroke fizzles');
 
     q2.emit('presence', { x: 0 });
     q2.emit('presence', { x: 5 });
@@ -121,6 +132,39 @@ try {
     const st = await once(q1, 'state');
     check(st.opponent.x < 1, `teleporting is refused: lateral speed is capped (x=${st.opponent.x.toFixed(2)})`);
     await wait(600);
+
+    // The client names 'bolt' and claims a perfect, instant draw, but the
+    // stroke is a pierce: the server casts what it recognizes, at the power
+    // it computes itself.
+    const lied = castBy(q1, m2.side);
+    const piercePts = fakeDraw('pierce');
+    q2.emit('cast', { spellId: 'bolt', points: piercePts, drawTime: 0.01, accuracy: 1, power: 9 });
+    const lie = await lied;
+    check(lie.spellId === 'pierce', `the server re-recognizes the stroke and ignores the claimed spell (cast ${lie.spellId})`);
+    // No live trail was streamed, so the server scores it at the unobserved draw time.
+    const expected = computePower(judgeCast(piercePts, ['bolt', 'pierce', 'shield']).accuracy, DRAW_TIME.UNOBSERVED_S, 'pierce');
+    check(Math.abs(lie.power - expected) < 1e-9 && lie.power < computePower(1, 0.01, 'pierce'),
+      `claimed accuracy, power and draw time are ignored (power ${lie.power.toFixed(3)} = server's ${expected.toFixed(3)})`);
+
+    const junk = once(q2, 'cast_ack');
+    q2.emit('cast', { spellId: 'bolt', points: scrawl, drawTime: 0.5, accuracy: 1 });
+    const jr = await junk;
+    check(jr.fizzled && jr.spellId === null, 'a stroke that matches no rune in the deck fizzles, whatever spell is claimed');
+
+    // q1 streams its live trail for 1.5 s, then claims it drew the rune in
+    // 0.05 s. The server timed the stroke itself.
+    const timedCast = castBy(q2, m1.side);
+    const t0 = Date.now();
+    while (Date.now() - t0 < 1500) { q1.emit('trail', { points: [[0, 0, 0]], active: true }); await wait(45); }
+    const vortexPts = fakeDraw('vortex');
+    q1.emit('cast', { spellId: 'vortex', points: vortexPts, drawTime: 0.05 });
+    q1.emit('trail_end', { points: [] });
+    const timed = await timedCast;
+    const acc = judgeCast(vortexPts, DECK).accuracy;
+    const timedCap = computePower(acc, 1.5, 'vortex'); // drawn for at least 1.5 s
+    check(timed.spellId === 'vortex' && timed.power <= timedCap + 1e-9 && timed.power < computePower(acc, 0.05, 'vortex'),
+      `draw time comes from the server's clock, not the claim (power ${timed.power.toFixed(3)} ≤ ${timedCap.toFixed(3)} for 1.5 s; the claim would give ${computePower(acc, 0.05, 'vortex').toFixed(3)})`);
+    await wait(1500); // let mana recover for the next section
   }
 
   console.log('\n[Dodging is enforced by the server]');

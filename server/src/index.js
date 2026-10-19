@@ -1,8 +1,9 @@
 // Rune Duel match server — real-time and authoritative.
 //
 // Runs the same shared Duel simulation as offline practice. A client sends a
-// `cast` with its raw stroke; the server re-scores the stroke (anti-cheat),
-// casts it in the room's Duel, and relays the resulting events to both
+// `cast` with its raw stroke; the server re-recognizes the stroke against the
+// caster's spellbook itself (anti-cheat — the spell, accuracy and draw time the
+// client claims are not trusted), casts it in the room's Duel, and relays the resulting events to both
 // players, who present them exactly as practice mode does. A fixed tick
 // advances the simulation, lands projectiles and streams authoritative state.
 //
@@ -15,7 +16,8 @@ import { randomBytes } from 'node:crypto';
 import { Server } from 'socket.io';
 import { identify, recordMatch } from './accounts.js';
 import {
-  SPELLS, DECK_SIZE, FIZZLE_THRESHOLD, scoreAgainst, Duel, SPECTACLE, MOVE_LIMIT, MOVE_SPEED, PROTOCOL_VERSION,
+  SPELLS, DECK_SIZE, Duel, SPECTACLE, MOVE_LIMIT, MOVE_SPEED, PROTOCOL_VERSION,
+  judgeCast, serverDrawTime, noteTrail, clearTrail,
 } from '@rune/shared';
 
 const PORT = Number(process.env.PORT) || 3001;
@@ -89,11 +91,6 @@ function validDeck(deck) {
     && deck.every((id) => typeof id === 'string' && Object.hasOwn(SPELLS, id));
 }
 
-function validStroke(points) {
-  return Array.isArray(points) && points.length >= 8 && points.length <= 2000
-    && points.every((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
-}
-
 // Token bucket: allows `burst` events at once, refilling at `perSecond`.
 function limiter(perSecond, burst) {
   let tokens = burst, last = Date.now();
@@ -138,6 +135,7 @@ function addPlayer(room, socket, name, deck, account = null) {
     token: randomBytes(18).toString('base64url'),
     connected: true, left: false, graceTimer: null, rematch: false,
     x: 0, xAt: Date.now(),
+    stroke: { startAt: 0, lastAt: 0 }, // server-side timing of the rune being drawn
   };
   room.players.push(player);
   sessions.set(player.token, { room, side: player.side });
@@ -186,7 +184,7 @@ function startMatch(room) {
   room.tickCount = 0;
   room.lastTick = Date.now();
   room.startedAt = Date.now();
-  room.players.forEach((p) => { p.rematch = false; p.ready = false; p.x = 0; p.xAt = Date.now(); });
+  room.players.forEach((p) => { p.rematch = false; p.ready = false; p.x = 0; p.xAt = Date.now(); clearTrail(p.stroke); });
   room.players.forEach((p) => emitTo(p, 'match_start', matchInfo(room, p.side)));
 
   clearTimeout(room.liveTimer);
@@ -305,26 +303,30 @@ function moveTo(player, x) {
   player.xAt = now;
 }
 
-function handleCast(room, side, { spellId, points, drawTime, x } = {}) {
+// The client's message is only a carrier for the raw stroke. Which spell it
+// was, how accurately it was drawn and how long it took are all decided here:
+// `spellId`, and any `accuracy` or `power` a modified client adds, are ignored.
+function handleCast(room, side, { points, drawTime, x } = {}) {
   if (!room || room.phase !== 'live') return;
   const player = room.players[side];
-  if (typeof spellId !== 'string' || !player.deck.includes(spellId)) return;
   if (x !== undefined) moveTo(player, x);
 
-  // Anti-cheat: the server re-scores the raw stroke instead of trusting the
-  // client's claim about what was drawn and how well.
-  const accuracy = validStroke(points) ? scoreAgainst(points, spellId) : 0;
-  if (accuracy < FIZZLE_THRESHOLD) {
-    player.socket.emit('cast_ack', { spellId, fizzled: true });
+  const now = Date.now();
+  const time = serverDrawTime(drawTime, player.stroke, now);
+  clearTrail(player.stroke);
+
+  // Anti-cheat: re-recognize the raw stroke against this player's spellbook
+  // with the same shared recognizer the client runs.
+  const verdict = judgeCast(points, player.deck);
+  if (verdict.fizzled) {
+    player.socket.emit('cast_ack', { spellId: null, fizzled: true });
     return;
   }
 
-  const now = Date.now();
   room.duel.setX(side, player.x);
-  const time = Math.max(0.25, Math.min(15, Number(drawTime) || 1.2));
-  const r = room.duel.cast(side, spellId, { accuracy, drawTime: time }, now);
+  const r = room.duel.cast(side, verdict.spellId, { accuracy: verdict.accuracy, drawTime: time }, now);
   if (r.block) {
-    player.socket.emit('cast_ack', { spellId, block: r.block });
+    player.socket.emit('cast_ack', { spellId: verdict.spellId, block: r.block });
     return;
   }
   emitRoom(room, 'events', { events: [r.event] });
@@ -519,16 +521,18 @@ io.on('connection', (socket) => {
     if (opp?.connected) opp.socket.volatile.emit('opponent_presence', { ...pose, x: me.x });
   }, presenceAllowed);
 
-  const relay = (event, out, volatile) => on(event, (data) => {
+  const relay = (event, out, volatile, track) => on(event, (data) => {
     const room = socket.data.room;
     if (!room || !data || typeof data !== 'object') return;
     if (data.points !== undefined && (!Array.isArray(data.points) || data.points.length > 120)) return;
+    if (track) track(room.players[socket.data.side]);
     const opp = opponentOf(room, socket.data.side);
     if (!opp?.connected) return;
     (volatile ? opp.socket.volatile : opp.socket).emit(out, data);
   }, presenceAllowed);
-  relay('trail', 'opponent_trail', true);
-  relay('trail_end', 'opponent_trail_end', false);
+  // Live trails double as the server's own clock for how long a rune took.
+  relay('trail', 'opponent_trail', true, (me) => { if (me?.stroke) noteTrail(me.stroke, Date.now()); });
+  relay('trail_end', 'opponent_trail_end', false, (me) => { if (me?.stroke) clearTrail(me.stroke); });
   relay('emote', 'opponent_emote', false);
 
   on('rematch', () => {
