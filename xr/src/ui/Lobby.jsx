@@ -24,10 +24,11 @@ export default function Lobby() {
 function RivalFound() {
   const name = useGame((s) => s.name);
   const opponentName = useGame((s) => s.opponentName);
+  const bot = useGame((s) => s.opponentBot);
   return (
     <div className="lobby">
       <div className="lobbyCard found">
-        <div className="foundTag">Rival found</div>
+        <div className="foundTag">{bot ? 'No wizards free: duelling a bot' : 'Rival found'}</div>
         <div className="versus">
           <span className="vName you">{name}</span>
           <span className="vs">VS</span>
@@ -116,6 +117,9 @@ function LobbyCard() {
                 <span>· {queue.others} other wizard{queue.others === 1 ? '' : 's'} online</span>
               )}
             </div>
+            {queue?.botAfterMs && (
+              <p className="lobbyStatus">If no one turns up in {Math.round(queue.botAfterMs / 1000)} s, you'll duel a bot. It draws real runes and is labelled as a bot.</p>
+            )}
             {elapsed >= 20 && (
               <div className="lobbyHint">
                 <p>The arena is quiet right now. Keep searching, or sharpen your runes against the AI.</p>

@@ -6,3 +6,4 @@ export * from './realtime.js';
 export * from './duel.js';
 export * from './protocol.js';
 export * from './authority.js';
+export * from './strokeModel.js';

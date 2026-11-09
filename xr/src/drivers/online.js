@@ -65,7 +65,8 @@ export class OnlineDriver {
         if (action === 'quick') {
           socket.emit('quick_match', payload, (r) => {
             if (!r?.ok) { set({ status: r?.error || 'Could not start matchmaking.' }); return finish({ ok: false, error: r?.error }); }
-            set({ status: 'Searching for an opponent…', queue: { position: 1, searching: 1 } });
+            this.botAfterMs = r.botAfterMs || null;
+            set({ status: 'Searching for an opponent…', queue: { position: 1, searching: 1, botAfterMs: this.botAfterMs } });
             finish({ ok: true });
           });
         } else if (action === 'create') {
@@ -112,7 +113,7 @@ export class OnlineDriver {
       const others = Math.max(0, (online || 1) - 1);
       set({
         status: 'Searching for an opponent…',
-        queue: { searching, online, others },
+        queue: { searching, online, others, botAfterMs: this.botAfterMs || null },
       });
     });
 
@@ -125,6 +126,8 @@ export class OnlineDriver {
       resetFeel();
       set({
         opponentName: m.opponent?.name || 'Opponent', roomCode: m.code, queue: null,
+        // a server bot filled the seat: the UI labels it as one
+        opponentBot: !!m.opponent?.bot,
         status: '', phase: 'loading', countdownEndsAt: 0, round: 1,
         hp: { you: 100, opponent: 100 },
         resources: { mana: RT.START_MANA, shield: 0, cd: {} },

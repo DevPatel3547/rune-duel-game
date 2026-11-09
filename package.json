@@ -13,7 +13,7 @@
     "dev:server": "npm run dev -w server",
     "dev:vr": "concurrently -n server,3d -c blue,magenta \"npm run dev -w server\" \"RD_HTTPS=1 npm run dev -w xr\"",
     "build": "npm run build -w xr",
-    "test": "node shared/test/run-tests.js && node shared/test/duel.test.js && node shared/test/authority.test.js",
+    "test": "node shared/test/run-tests.js && node shared/test/duel.test.js && node shared/test/authority.test.js && node shared/test/strokeModel.test.js",
     "test:smoke": "npm run smoke -w xr",
     "test:online": "node server/test/e2e.js",
     "test:online2p": "node xr/test/online2p.mjs",
@@ -25,7 +25,9 @@
     "shots:vfx": "node xr/test/vfxshot.mjs",
     "shots:domain": "node xr/test/domainshot.mjs",
     "test:live": "node xr/test/live.mjs",
-    "test:cheat": "node server/test/cheat-client.mjs"
+    "test:cheat": "node server/test/cheat-client.mjs",
+    "test:bots": "node server/test/bots.mjs",
+    "test:server": "node server/test/e2e.js && node server/test/cheat-client.mjs && node server/test/bots.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

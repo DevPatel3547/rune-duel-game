@@ -15,6 +15,7 @@ import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { Server } from 'socket.io';
 import { identify, recordMatch } from './accounts.js';
+import { Bot, botSocket, botIdentity } from './bots.js';
 import {
   SPELLS, DECK_SIZE, Duel, SPECTACLE, MOVE_LIMIT, MOVE_SPEED, PROTOCOL_VERSION,
   judgeCast, serverDrawTime, noteTrail, clearTrail, newStrokeTiming, validStroke,
@@ -31,6 +32,9 @@ const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) || 15000;
 const LOBBY_TTL_MS = 10 * 60 * 1000; // an unjoined private room expires
 const MAX_ROOMS = 5000;
 const MIN_DECK = 3;
+// A lone quick-match player is paired with a bot after this long (0 = never).
+const BOT_BACKFILL_MS = process.env.BOT_BACKFILL_MS !== undefined ? Number(process.env.BOT_BACKFILL_MS) : 6000;
+const BOT_SKILL = process.env.BOT_SKILL || 'normal';
 
 // Comma-separated list of web origins allowed to connect. Unset = allow all
 // (local development). Requests with no Origin header — native apps, tests —
@@ -58,6 +62,7 @@ app.get('/health', (req, res) => {
   res.json({
     ok: true, protocol: PROTOCOL_VERSION, online: io.engine.clientsCount,
     rooms: rooms.size, playing, searching: queue.length, uptime: Math.round(process.uptime()),
+    bots: [...rooms.values()].reduce((n, r) => n + r.players.filter((p) => p.bot && !p.left).length, 0),
   });
 });
 
@@ -186,7 +191,8 @@ function matchInfo(room, side) {
   return {
     side, code: room.code, token: me.token, countdownMs: COUNTDOWN_MS, ranked: isRanked(room),
     you: { name: me.name, deck: me.deck, rating: me.rating },
-    opponent: { name: opp.name, deck: opp.deck, rating: opp.rating },
+    // bot: the opponent is a server bot (see bots.js); clients must say so
+    opponent: { name: opp.name, deck: opp.deck, rating: opp.rating, bot: !!opp.bot },
   };
 }
 
@@ -196,6 +202,7 @@ function disposeRoom(room) {
   clearTimeout(room.readyTimer);
   for (const p of room.players) {
     clearTimeout(p.graceTimer);
+    p.brain?.stop();
     sessions.delete(p.token);
     if (p.socket.data.room === room) p.socket.data.room = null;
   }
@@ -303,7 +310,8 @@ function endMatch(room, { forfeitBy } = {}) {
   // database in one transaction. Fire-and-forget: a slow database must never
   // hold up anyone's result screen.
   const [a, b] = room.players;
-  if (a && b) {
+  // Games against a bot are practice: they are never recorded or rated.
+  if (a && b && !a.bot && !b.bot) {
     recordMatch({
       mode: room.mode, a, b,
       result: duel.winner === 0 ? 'a' : duel.winner === 1 ? 'b' : 'draw',
@@ -361,6 +369,62 @@ function handleCast(room, side, { points, drawTime, x } = {}) {
     return;
   }
   emitRoom(room, 'events', { events: [r.event] });
+}
+
+function requestRematch(room, side) {
+  if (room.phase !== 'over') return true;
+  const opp = opponentOf(room, side);
+  if (!opp || opp.left) return false;
+  room.players[side].rematch = true;
+  emitTo(opp, 'opponent_rematch');
+  if (room.players.every((p) => p.rematch)) startMatch(room);
+  return true;
+}
+
+// ── bots ───────────────────────────────────────────────────────────────────
+// Seat a bot opposite a human. The bot acts only through what a client can
+// do: report ready, stream a trail, cast a raw stroke (re-recognized and
+// timed by handleCast like anyone's), move within the speed cap, rematch,
+// and leave.
+function seatBot(room) {
+  const id = botIdentity();
+  let brain = null;
+  const sock = botSocket((event, data) => brain?.on(event, data));
+  const player = addPlayer(room, sock, id.name, id.deck, null);
+  player.bot = true;
+  const opp = () => opponentOf(room, player.side);
+  brain = new Bot({
+    view: () => ({ duel: room.duel, side: player.side, phase: room.phase }),
+    deck: () => player.deck,
+    ready: () => markReady(room, player.side),
+    trail: (points2d, points3d) => {
+      if (room.phase !== 'live') return;
+      noteTrail(player.stroke, Date.now(), points2d);
+      const o = opp();
+      if (o?.connected) o.socket.volatile.emit('opponent_trail', { points: points3d, active: true });
+    },
+    trailEnd: () => emitTo(opp(), 'opponent_trail_end', {}),
+    cast: (points, drawTime) => handleCast(room, player.side, { points, drawTime }),
+    move: (x) => moveTo(player, x),
+    rematch: () => requestRematch(room, player.side),
+    leave: () => leaveRoom(sock),
+  }, { skill: BOT_SKILL });
+  player.brain = brain;
+  return player;
+}
+
+// A quick-match player still waiting after BOT_BACKFILL_MS duels a bot.
+function scheduleBackfill(entry) {
+  if (!(BOT_BACKFILL_MS > 0)) return;
+  entry.backfill = setTimeout(() => {
+    if (!queue.includes(entry) || !entry.socket.connected) return;
+    queue = queue.filter((q) => q !== entry);
+    const room = newRoom('quick');
+    addPlayer(room, entry.socket, entry.name, entry.deck, entry.account);
+    seatBot(room);
+    startMatch(room);
+    broadcastQueue();
+  }, BOT_BACKFILL_MS);
 }
 
 // ── leaving ────────────────────────────────────────────────────────────────
@@ -496,9 +560,11 @@ io.on('connection', (socket) => {
     if (!socket.connected) return;
     leaveRoom(socket);
     queue = queue.filter((q) => q.socket !== socket);
-    queue.push({ socket, name: account?.name || cleanName(name), deck, account, rating: account?.rating ?? null });
-    reply(ack, { ok: true });
+    const entry = { socket, name: account?.name || cleanName(name), deck, account, rating: account?.rating ?? null };
+    queue.push(entry);
+    reply(ack, { ok: true, botAfterMs: BOT_BACKFILL_MS > 0 ? BOT_BACKFILL_MS : null });
     pairQueue();
+    scheduleBackfill(entry);
   });
 
   on('cancel_queue', () => dequeue(socket));
@@ -577,12 +643,7 @@ io.on('connection', (socket) => {
 
   on('rematch', () => {
     const room = socket.data.room;
-    if (!room || room.phase !== 'over') return;
-    const opp = opponentOf(room, socket.data.side);
-    if (!opp || opp.left) { socket.emit('rematch_unavailable'); return; }
-    room.players[socket.data.side].rematch = true;
-    emitTo(opp, 'opponent_rematch');
-    if (room.players.every((p) => p.rematch)) startMatch(room);
+    if (room && !requestRematch(room, socket.data.side)) socket.emit('rematch_unavailable');
   });
 
   // Round-trip timing, so the client can shorten animated flights by its lag.
