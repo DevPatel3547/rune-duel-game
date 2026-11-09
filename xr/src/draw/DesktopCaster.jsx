@@ -189,7 +189,9 @@ export default function DesktopCaster() {
       head: { p: [p.x, p.y, p.z], q: [q.x, q.y, q.z, q.w] },
       hands: [{ p: lastHand.current, q: [0, 0, 0, 1], draw: draw.current.active }],
     });
-    if (draw.current.active) g.sendTrail({ points: downsample(draw.current.pts3, 80), active: true });
+    // points2d is the stroke so far in the recognizer's 2D space: the match
+    // server checks the final cast against it (see shared/src/authority.js).
+    if (draw.current.active) g.sendTrail({ points: downsample(draw.current.pts3, 80), points2d: downsample(draw.current.pts2, 96), active: true });
   });
 
   return (

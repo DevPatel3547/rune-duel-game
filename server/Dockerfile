@@ -11,7 +11,6 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
 COPY server/package.json server/
-COPY client/package.json client/
 COPY xr/package.json xr/
 RUN npm ci --omit=dev --workspace server --include-workspace-root=false \
  && npm cache clean --force

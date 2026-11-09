@@ -114,7 +114,7 @@ export default function VRHands() {
       if (d.netAcc >= 1 / 60) { // refresh the visible trail ~60Hz
         d.netAcc = 0;
         setTrail((t) => ({ ...t, points: d.pts3.slice() }));
-        if (g.mode === 'online') g.sendTrail({ points: downsample(d.pts3, 80), active: true });
+        if (g.mode === 'online') g.sendTrail({ points: downsample(d.pts3, 80), points2d: downsample(d.pts2, 96), active: true });
       }
     }
   });

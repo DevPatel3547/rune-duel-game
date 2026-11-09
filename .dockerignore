@@ -9,7 +9,5 @@ scripts
 **/dist
 **/test
 
-client/*
-!client/package.json
 xr/*
 !xr/package.json
