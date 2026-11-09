@@ -17,7 +17,7 @@ import { Server } from 'socket.io';
 import { identify, recordMatch } from './accounts.js';
 import {
   SPELLS, DECK_SIZE, Duel, SPECTACLE, MOVE_LIMIT, MOVE_SPEED, PROTOCOL_VERSION,
-  judgeCast, serverDrawTime, noteTrail, clearTrail,
+  judgeCast, serverDrawTime, noteTrail, clearTrail, newStrokeTiming, validStroke,
 } from '@rune/shared';
 
 const PORT = Number(process.env.PORT) || 3001;
@@ -106,6 +106,35 @@ function limiter(perSecond, burst) {
 
 const reply = (ack, value) => { if (typeof ack === 'function') ack(value); };
 
+const vec = (v, n) => Array.isArray(v) && v.length === n && v.every(Number.isFinite);
+const pq = (o) => (o && typeof o === 'object' && vec(o.p, 3) && vec(o.q, 4) ? { p: o.p, q: o.q } : null);
+
+// A head/hands pose as relayed to the opponent: only well-formed transforms.
+function cleanPose(pose) {
+  const out = {};
+  const head = pq(pose.head);
+  if (head) out.head = head;
+  if (Array.isArray(pose.hands) && pose.hands.length <= 2) {
+    out.hands = pose.hands.map((h) => {
+      const base = pq(h) || (h && vec(h.p, 3) ? { p: h.p, q: [0, 0, 0, 1] } : null);
+      return base && { ...base, pinch: !!h.pinch, draw: !!h.draw };
+    }).filter(Boolean);
+  }
+  return out;
+}
+
+// A trail as relayed to the opponent: up to 120 finite [x, y, z] points.
+function cleanTrail(data) {
+  const out = {};
+  if (data.points !== undefined) {
+    if (!Array.isArray(data.points) || data.points.length > 120) return null;
+    if (!data.points.every((p) => Array.isArray(p) && p.length === 3 && p.every(Number.isFinite))) return null;
+    out.points = data.points;
+  }
+  if (data.active !== undefined) out.active = !!data.active;
+  return out;
+}
+
 function makeCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code;
@@ -135,7 +164,7 @@ function addPlayer(room, socket, name, deck, account = null) {
     token: randomBytes(18).toString('base64url'),
     connected: true, left: false, graceTimer: null, rematch: false,
     x: 0, xAt: Date.now(),
-    stroke: { startAt: 0, lastAt: 0 }, // server-side timing of the rune being drawn
+    stroke: newStrokeTiming(), // what the server watched of the rune being drawn
   };
   room.players.push(player);
   sessions.set(player.token, { room, side: player.side });
@@ -312,7 +341,9 @@ function handleCast(room, side, { points, drawTime, x } = {}) {
   if (x !== undefined) moveTo(player, x);
 
   const now = Date.now();
-  const time = serverDrawTime(drawTime, player.stroke, now);
+  // The draw time is bounded by the live trail the server watched, and only
+  // if that trail is the stroke being cast (see shared/src/authority.js).
+  const time = serverDrawTime(drawTime, player.stroke, now, validStroke(points) ? points : null);
   clearTrail(player.stroke);
 
   // Anti-cheat: re-recognize the raw stroke against this player's spellbook
@@ -405,7 +436,8 @@ io.on('connection', (socket) => {
   socket.data.room = null;
   socket.data.side = -1;
   const castAllowed = limiter(6, 10);
-  const presenceAllowed = limiter(40, 60);
+  // presence (~22 Hz) and trails (~30 Hz) share this budget while drawing.
+  const presenceAllowed = limiter(70, 100);
   const actionAllowed = limiter(4, 8);
 
   // Every handler is guarded: one malformed payload must never take the
@@ -518,22 +550,30 @@ io.on('connection', (socket) => {
     const me = room.players[socket.data.side];
     if (pose.x !== undefined) moveTo(me, pose.x);
     const opp = opponentOf(room, socket.data.side);
-    if (opp?.connected) opp.socket.volatile.emit('opponent_presence', { ...pose, x: me.x });
+    if (opp?.connected) opp.socket.volatile.emit('opponent_presence', { ...cleanPose(pose), x: me.x });
   }, presenceAllowed);
 
-  const relay = (event, out, volatile, track) => on(event, (data) => {
+  // Relays to the opponent carry only fields we have checked, never the
+  // sender's object as-is: a modified client must not be able to push
+  // arbitrary data into the other player's game.
+  const relay = (event, out, volatile, clean, track) => on(event, (data) => {
     const room = socket.data.room;
     if (!room || !data || typeof data !== 'object') return;
-    if (data.points !== undefined && (!Array.isArray(data.points) || data.points.length > 120)) return;
-    if (track) track(room.players[socket.data.side]);
+    const payload = clean(data);
+    if (!payload) return;
+    if (track) track(room.players[socket.data.side], data);
     const opp = opponentOf(room, socket.data.side);
     if (!opp?.connected) return;
-    (volatile ? opp.socket.volatile : opp.socket).emit(out, data);
+    (volatile ? opp.socket.volatile : opp.socket).emit(out, payload);
   }, presenceAllowed);
-  // Live trails double as the server's own clock for how long a rune took.
-  relay('trail', 'opponent_trail', true, (me) => { if (me?.stroke) noteTrail(me.stroke, Date.now()); });
-  relay('trail_end', 'opponent_trail_end', false, (me) => { if (me?.stroke) clearTrail(me.stroke); });
-  relay('emote', 'opponent_emote', false);
+  // Live trails double as the server's evidence of how a rune was drawn: the
+  // 2D stroke so far (points2d) is checked against the eventual cast. Only
+  // the 3D points the opponent renders are relayed.
+  relay('trail', 'opponent_trail', true, cleanTrail,
+    (me, data) => { if (me?.stroke) noteTrail(me.stroke, Date.now(), data.points2d); });
+  relay('trail_end', 'opponent_trail_end', false, cleanTrail, (me) => { if (me?.stroke) clearTrail(me.stroke); });
+  relay('emote', 'opponent_emote', false,
+    (d) => (typeof d.id === 'string' && /^[a-z0-9_-]{1,16}$/i.test(d.id) ? { id: d.id } : null));
 
   on('rematch', () => {
     const room = socket.data.room;
@@ -582,6 +622,9 @@ function shutdown() {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`⚡ Rune Duel match server listening on :${PORT} (protocol v${PROTOCOL_VERSION})`);
+// Local development listens on this machine only (Vite proxies to it);
+// production (NODE_ENV=production, as on Fly) must accept outside traffic.
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+httpServer.listen(PORT, HOST, () => {
+  console.log(`⚡ Rune Duel match server listening on ${HOST}:${PORT} (protocol v${PROTOCOL_VERSION})`);
 });

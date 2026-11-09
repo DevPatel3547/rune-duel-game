@@ -7,7 +7,8 @@ import { spawn } from 'node:child_process';
 import { io } from 'socket.io-client';
 import { TEMPLATES, PROTOCOL_VERSION, judgeCast, computePower, DRAW_TIME } from '@rune/shared';
 
-const PORT = 3107;
+// A random high port: this may run beside other servers on a shared machine.
+const PORT = Number(process.env.E2E_PORT) || 20000 + Math.floor(Math.random() * 30000);
 const SERVER = `http://localhost:${PORT}`;
 const DECK = ['bolt', 'shield', 'vortex', 'pierce', 'leech'];
 const ATTACKS = ['bolt', 'pierce', 'vortex'];
@@ -151,12 +152,17 @@ try {
     const jr = await junk;
     check(jr.fizzled && jr.spellId === null, 'a stroke that matches no rune in the deck fizzles, whatever spell is claimed');
 
-    // q1 streams its live trail for 1.5 s, then claims it drew the rune in
-    // 0.05 s. The server timed the stroke itself.
+    // q1 streams its live trail for 1.5 s, the stroke growing as a hand draws
+    // it, then claims it drew the rune in 0.05 s. The server timed the stroke
+    // itself and checked the trail against the cast.
     const timedCast = castBy(q2, m1.side);
-    const t0 = Date.now();
-    while (Date.now() - t0 < 1500) { q1.emit('trail', { points: [[0, 0, 0]], active: true }); await wait(45); }
     const vortexPts = fakeDraw('vortex');
+    const t0 = Date.now();
+    while (Date.now() - t0 < 1500) {
+      const frac = Math.min(1, (Date.now() - t0) / 1500 + 0.05);
+      q1.emit('trail', { points: [[0, 0, 0]], points2d: vortexPts.slice(0, Math.max(2, Math.ceil(vortexPts.length * frac))), active: true });
+      await wait(45);
+    }
     q1.emit('cast', { spellId: 'vortex', points: vortexPts, drawTime: 0.05 });
     q1.emit('trail_end', { points: [] });
     const timed = await timedCast;
@@ -171,7 +177,8 @@ try {
   {
     const incoming = new Promise((resolve) => {
       const h = ({ events }) => {
-        const hit = events.find((e) => e.type === 'impact' && e.by === m1.side);
+        // the bolt below, not a spell still in flight from the section before
+        const hit = events.find((e) => e.type === 'impact' && e.by === m1.side && e.spellId === 'bolt');
         if (hit) { q2.off('events', h); resolve(hit); }
       };
       q2.on('events', h);
